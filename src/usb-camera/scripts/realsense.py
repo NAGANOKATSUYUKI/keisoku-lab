@@ -20,11 +20,15 @@ def image_callback(msg):
         bridge = CvBridge()
         # ROSのImageメッセージをOpenCVの画像形式に変換
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-        
-        # 画像処理や物体検出のための処理を追加
+
+        # height,width = cv_image.shape[:2]
+        # new_width = 640  
+        # new_height = int(height * (new_width / width))
+        # cv_image_resized = cv2.resize(cv_image, (new_width, new_height))
         
         # 検出結果を表示
-        cv2.imshow("YOLO Object Detection", cv_image)
+        cv2.imshow("realsense", cv_image)
+        cv2.resizeWindow("realsense", 640, 480)
         cv2.waitKey(1)
         
     except Exception as e:
@@ -32,7 +36,7 @@ def image_callback(msg):
 
 def main():
     # ノードの初期化
-    rospy.init_node('yolo_object_detection')
+    rospy.init_node('realsense')
     
     # Imageトピックのサブスクライバを作成
     image_subscriber = rospy.Subscriber('/camera/color/image_raw', Image, image_callback)

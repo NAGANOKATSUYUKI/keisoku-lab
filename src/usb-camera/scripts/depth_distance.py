@@ -26,7 +26,7 @@ class PersonDetector():
 
         # Subscribe
         sub_camera_rgb     =  rospy.Subscriber('/camera/color/image_raw', Image, self.CamRgbImageCallback)
-        sub_camera_depth   =  rospy.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, self.CamDepthImageCallback)
+        sub_camera_depth   =  rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.CamDepthImageCallback)
         sub_darknet_bbox   =  rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.DarknetBboxCallback)
 
         return
@@ -38,12 +38,17 @@ class PersonDetector():
             rospy.logerr(e)
 
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        
+        new_width = 640
+        new_heigth = 480
+        new_size = ( new_width, new_heigth)
+        resized_image = cv2.resize(rgb_image, new_size)
 
         # 人がいる場合
         if self.person_bbox.probability > 0.0 :
 
            # 一旦、BoundingBoxの中心位置の深度を取得 (今後改善予定）
-            m_person_depth = self.m_depth_image[(int)(self.person_bbox.ymax+self.person_bbox.ymin)/2][(int)(self.person_bbox.xmax+self.person_bbox.xmin)/2]
+            m_person_depth = self.m_depth_image[(int)((self.person_bbox.ymax+self.person_bbox.ymin)/2)][(int)((self.person_bbox.xmax+self.person_bbox.xmin)/2)]
 
             cv2.rectangle(rgb_image, (self.person_bbox.xmin, self.person_bbox.ymin), (self.person_bbox.xmax, self.person_bbox.ymax),(0,0,255), 2)
             rospy.loginfo('Class : person, Score: %.2f, Dist: %dmm ' %(self.person_bbox.probability, m_person_depth))
@@ -69,7 +74,7 @@ class PersonDetector():
             self.m_depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, 'passthrough')
         except CvBridgeError as e:
             rospy.logerr(e)
-        self.m_camdepth_height, self.m_camdepth_width = self.m_depth_image.shape[:2]
+        # self.m_camdepth_height, self.m_camdepth_width = self.m_depth_image.shape[:2]
         return
 
     def DarknetBboxCallback(self, darknet_bboxs):
@@ -77,7 +82,7 @@ class PersonDetector():
         person_bbox = BoundingBox()
         if len(bboxs) != 0 :
             for i, bb in enumerate(bboxs) :
-                if bboxs[i].Class == 'person' and bboxs[i].probability >= self.m_pub_threshold:
+                if bboxs[i].Class == 'cell phone' and bboxs[i].probability >= self.m_pub_threshold:
                     person_bbox = bboxs[i]        
         self.person_bbox = person_bbox
 
