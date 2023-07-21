@@ -13,6 +13,12 @@ class Detector():
         self.cv_bridge = CvBridge()
         self.bbox = BoundingBox()
         self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.40)
+        self.count = 0
+        self.depth_distance = []
+        self.probability = []
+        self.last_depth_distance = None
+        self.average_probability = 0
+        self.average_depth_distance = 0
 
         sub_cam_rgb      = rospy.Subscriber("/camera/color/image_raw", Image, self.ImageCallback)
         sub_darknet_bbox = rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.DarknetBboxCallback)
@@ -23,69 +29,12 @@ class Detector():
             # ROSのImageメッセージをOpenCVの画像形式に変換
             cam_image = self.cv_bridge.imgmsg_to_cv2(cam_image_msg, "bgr8")
             height, width = cam_image.shape[:2]
-            #トリミング
-            crop_x = 320
-            crop_y = 120
-            crop_width = 640
-            crop_height = 480
-            crop_image = cam_image[crop_y:crop_y+crop_height,crop_x:crop_x+crop_width]
-            height, width = crop_image.shape[:2]
-
 
         except CvBridgeError as e:
             rospy.logerr(e)
 
-        #画像のリサイズ
-        # resized_width = 640
-        # resized_height= int(height * (resized_width / width))
-        # cam_image_resized = cv2.resize(cam_image, (resized_width, resized_height)) #画像のリサイズはいけているが、YOLOからのもらうサイズが1280*720になっているため、検出の矩形と点ずれている
-
-        # スケーリングあり
-        # if self.bbox.probability > 0.0 :
-        #     #スケーリング率計算
-        #     original_width  = 1280
-        #     original_height = 720
-
-        #     scale_x = original_width / resized_width
-        #     scale_y = original_height / resized_height
-
-        #     #スケーリング調整
-        #     bbox_xmax = int(self.bbox.xmax / scale_x)
-        #     bbox_xmin = int(self.bbox.xmin / scale_x)
-        #     bbox_ymax = int(self.bbox.ymax / scale_y)
-        #     bbox_ymin = int(self.bbox.ymin / scale_y)
-
-        #     #中心座標
-        #     w = bbox_xmax - bbox_xmin
-        #     h = bbox_ymax - bbox_ymin
-        #     x = bbox_xmin + w/2
-        #     y = bbox_ymin + h/2
-        #     class_name = str(self.bbox.Class)
-                
-        #     #深度距離
-        #     depth_x = int((bbox_xmax + bbox_xmin) // 2)
-        #     depth_y = int((bbox_ymax + bbox_ymin) // 2)
-        #     bbox_depth = self.depth_image[depth_y][depth_x]\
-
-        #     # 検出したものを円で囲む
-        #     cv2.circle(cam_image_resized, (int(x), int(y)), 5, (0,0,255), -1)
-
-        #     #検出したものを矩形で囲む
-        #     cv2.rectangle(cam_image_resized, (bbox_xmin, bbox_ymin), (bbox_xmax, bbox_ymax),(0,0,255), 2)
-        #     cv2.putText(cam_image_resized, class_name, (bbox_xmin, bbox_ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255),2 )
-            
-        #     cv2.imshow("cam_image", crop_image)
-        #     cv2.waitKey(1)
-        #     cv2.imshow("depth_image", self.crop_depth_image)
-        #     cv2.waitKey(1)
-        # else :
-        #     cv2.imshow("cam_image", crop_image)
-        #     cv2.waitKey(1)
-        #     cv2.imshow("depth_image", self.crop_depth_image)
-        #     cv2.waitKey(1)
-
         # スケーリングなし
-        if self.bbox.probability > 0.0 :
+        if self.bbox.probability > 0.85 :
             #中心座標
             w = self.bbox.xmax - self.bbox.xmin
             h = self.bbox.ymax - self.bbox.ymin
@@ -98,54 +47,62 @@ class Detector():
             depth_y = int((self.bbox.ymax + self.bbox.ymin) // 2)
             bbox_depth = self.depth_image[depth_y][depth_x]
 
-            rospy.loginfo("Class: %s, Score: %.2f, center: x=%.1f, y=%.1f, Dist: %dmm" % (class_name, self.bbox.probability, x, y, bbox_depth))
+            rospy.loginfo("Class: %s  Score: %.2f  center: %.1f,%.1f  Dist: %dmm  count: %d" % (class_name, self.bbox.probability, x, y, bbox_depth,self.count))
             # rospy.loginfo("color:width= %d, height= %d, depth:width= %d, height= %d" %(width, height, self.depth_width, self.depth_height ))
 
             #検出したものを円で囲む
-            cv2.circle(crop_image, (int(x), int(y)), 5, (0,0,255), -1)
+            cv2.circle(cam_image, (int(x), int(y)), 5, (0,0,255), -1)
             #検出したものを矩形で囲む
-            cv2.rectangle(crop_image, (self.bbox.xmin, self.bbox.ymin), (self.bbox.xmax, self.bbox.ymax),(0,0,255), 2)
-            cv2.putText(crop_image, class_name, (self.bbox.xmin, self.bbox.ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255),2 )
+            cv2.rectangle(cam_image, (self.bbox.xmin, self.bbox.ymin), (self.bbox.xmax, self.bbox.ymax),(0,0,255), 2)
+            cv2.putText(cam_image, class_name, (self.bbox.xmin, self.bbox.ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255),2 )
             
-            cv2.imshow("cam_image", crop_image)
+            cv2.imshow("cam_image", cam_image)
             cv2.waitKey(1)
-            cv2.imshow("depth_image", self.crop_depth_image)
+            cv2.imshow("depth_image", self.depth_image)
             cv2.waitKey(1)
+
+            # 平均深度距離
+            if bbox_depth != 0:    
+                self.probability.append(self.bbox.probability)
+                self.depth_distance.append(bbox_depth)
+                self.count += 1
+            # if bbox_depth != 0:    
+            #     if self.last_depth_distance is not None and abs(bbox_depth - self.last_depth_distance) < 50: #last_depth_distanceがNoneではなくかつ差が50mmない場合
+            #         self.depth_distance.append(bbox_depth)
+            #         self.count += 1
+            #     else :
+            #         self.last_depth_distance = bbox_depth #うまくコードがつくれない
+            #         self.count += 1
+                    
+            if self.count >= 30:
+                self.average_probability = sum(self.probability) / len(self.probability)
+                self.average_depth_distance = sum(self.depth_distance) / len(self.depth_distance)
+                rospy.loginfo("信頼度： %.3f  平均深度距離： %dmm" % (self.average_probability, self.average_depth_distance))
+
+                self.depth_distance = []
+                self.probability = []
+                self.count = 0
+
         else :
-            cv2.imshow("cam_image", crop_image)
+            cv2.imshow("cam_image", cam_image)
             cv2.waitKey(1)
-            cv2.imshow("depth_image", self.crop_depth_image)
+            cv2.imshow("depth_image", self.depth_image)
             cv2.waitKey(1)
     
     def DepthCallback(self, depth_image_data):
-        # self.depth_image = None
         try:
             self.depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, "passthrough")
-            # self.depth_height, self.depth_width = self.depth_image.shape[:2]
-            
-            # #画像のリサイズ
-            # new_width = 640
-            # new_height= int(self.depth_height * (new_width / self.depth_width))
-            # self.depth_image_resized = cv2.resize(self.depth_image, (new_width, new_height))
-
-            #トリミング
-            crop_x = 320
-            crop_y = 120
-            crop_width = 640
-            crop_height = 480
-            self.crop_depth_image = self.depth_image[crop_y:crop_y+crop_height,crop_x:crop_x+crop_width]
-            self.depth_height, self.depth_width = self.crop_depth_image.shape[:2]
+            self.depth_height, self.depth_width = self.depth_image.shape[:2]
 
         except CvBridgeError as e:
             rospy.logerr(e)
 
     def DarknetBboxCallback(self, darknet_bboxs):
-
         bboxs = darknet_bboxs.bounding_boxes
         bbox = BoundingBox()
         if len(bboxs) != 0 :
             for i, bb in enumerate(bboxs) :
-                if bboxs[i].Class == 'cell phone' and bboxs[i].probability >= self.m_pub_threshold:
+                if bboxs[i].Class == 'bottle' and bboxs[i].probability >= self.m_pub_threshold:
                     bbox = bboxs[i]        
         self.bbox = bbox
     
