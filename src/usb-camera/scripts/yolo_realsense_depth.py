@@ -6,6 +6,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_msgs.msg import BoundingBoxes, BoundingBox
 import cv2
+import csv
 
 class Detector():
     def __init__(self) :
@@ -22,7 +23,12 @@ class Detector():
 
         sub_cam_rgb      = rospy.Subscriber("/camera/color/image_raw", Image, self.ImageCallback)
         sub_darknet_bbox = rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.DarknetBboxCallback)
-        sub_cam_depth    = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.DepthCallback) #rs_camera.launch の中のalin_depthをtrueにしたことでいけた。サイズも６４０＊４８０になっている
+        sub_cam_depth    = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.DepthCallback)
+
+        # csv出力
+        self.csv_file = open("yolo_distance_data.csv", "w", newline="")
+        self.csv_writer = csv.writer(self.csv_file)
+        self.csv_writer.writerow(["Score", "Depth"])
 
     def ImageCallback(self, cam_image_msg):
         try:
@@ -34,7 +40,7 @@ class Detector():
             rospy.logerr(e)
 
         # スケーリングなし
-        if self.bbox.probability > 0.85 :
+        if self.bbox.probability > 0.0 :
             #中心座標
             w = self.bbox.xmax - self.bbox.xmin
             h = self.bbox.ymax - self.bbox.ymin
@@ -62,10 +68,11 @@ class Detector():
             cv2.waitKey(1)
 
             # 平均深度距離
-            if bbox_depth != 0:    
+            if 0 < bbox_depth <= 1000:   #0より大きく1000以下 
                 self.probability.append(self.bbox.probability)
                 self.depth_distance.append(bbox_depth)
                 self.count += 1
+                self.csv_writer.writerow([bbox_depth, self.bbox.probability]) #csv
             # if bbox_depth != 0:    
             #     if self.last_depth_distance is not None and abs(bbox_depth - self.last_depth_distance) < 50: #last_depth_distanceがNoneではなくかつ差が50mmない場合
             #         self.depth_distance.append(bbox_depth)
@@ -78,6 +85,11 @@ class Detector():
                 self.average_probability = sum(self.probability) / len(self.probability)
                 self.average_depth_distance = sum(self.depth_distance) / len(self.depth_distance)
                 rospy.loginfo("信頼度： %.3f  平均深度距離： %dmm" % (self.average_probability, self.average_depth_distance))
+                
+                # csv
+                self.csv_writer.writerow([])
+                self.csv_writer.writerow([ self.average_depth_distance, self.average_probability])
+                self.csv_writer.writerow([])
 
                 self.depth_distance = []
                 self.probability = []
@@ -105,6 +117,10 @@ class Detector():
                 if bboxs[i].Class == 'bottle' and bboxs[i].probability >= self.m_pub_threshold:
                     bbox = bboxs[i]        
         self.bbox = bbox
+
+    def __del__(self):
+
+        self.csv_file.close()
     
 if __name__ == '__main__':
     try:
