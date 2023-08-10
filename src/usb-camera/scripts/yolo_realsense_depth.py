@@ -28,7 +28,7 @@ class Detector():
         # csv出力
         self.csv_file = open("yolo_distance_data.csv", "w", newline="")
         self.csv_writer = csv.writer(self.csv_file)
-        self.csv_writer.writerow(["Score", "Depth"])
+        self.csv_writer.writerow([ "Depth", "Score"])
 
     def ImageCallback(self, cam_image_msg):
         try:
