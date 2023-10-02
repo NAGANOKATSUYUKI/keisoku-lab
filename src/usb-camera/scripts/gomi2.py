@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import rospy
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point
@@ -11,6 +14,7 @@ class Detector(object):
         self.yolo_x = 320
         self.yolo_y = 240
 
+        #topic_subscriber
         rospy.init_node("detector_node")
         rospy.Subscriber("hsrb/head_rgbd_sensor/depth_registered/image_raw", Image, self.Camera_callback)
         #rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.Camera_callback)
@@ -28,7 +32,7 @@ class Detector(object):
             self.depth_data = self.image[int(self.yolo_y)][int(self.yolo_x)]
             print("depth = ",self.depth_data)
 
-            #得られた値をPublish
+            #topicとメッセージの作成
             pub = rospy.Publisher('point_topic', Point, queue_size=10)
 
             point_msg = Point()

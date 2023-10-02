@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import hsrb_interface
@@ -31,20 +31,17 @@ hand_up = geometry.pose(x=0.1)
 # handを0.5[m]手前に移動させる姿勢
 hand_back = geometry.pose(z=-0.5)
 
-# ソファの場所
-sofa_pos = (1.2, 0.4, 1.57)
+
 
 if __name__=='__main__':
 
+    # まずは一言
+    rospy.sleep(5.0)
+    tts.say('こんにちはHSRだよ')
+    rospy.sleep(5.0)
 
-    try:
-        gripper.command(1.0)
-        whole_body.move_to_go()
-    except:
-        tts.say('初期化に失敗')
-        rospy.logerr('fail to init')
-        sys.exit()
-
+    
+    
 
     try:
         # 把持用初期姿勢に遷移
