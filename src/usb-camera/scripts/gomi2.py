@@ -20,7 +20,6 @@ class Detector(object):
         #rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.Camera_callback)
         rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.Bbox_callback)
 
-        cv2.namedWindow("Test Image", cv2.WINDOW_NORMAL)
         rospy.loginfo("Detector --> OK")
 
 

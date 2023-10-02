@@ -1229,6 +1229,12 @@ hsrb_web_user_interface_samples_BINARY_DIR:STATIC=/home/keisoku/catkin_ws/build/
 //Value Computed by CMake
 hsrb_web_user_interface_samples_SOURCE_DIR:STATIC=/home/keisoku/catkin_ws/src/hsrb_samples/hsrb_web_user_interface_samples
 
+//Value Computed by CMake
+hsrc_BINARY_DIR:STATIC=/home/keisoku/catkin_ws/build/hsrc
+
+//Value Computed by CMake
+hsrc_SOURCE_DIR:STATIC=/home/keisoku/catkin_ws/src/hsrc
+
 //The directory containing a CMake configuration file for image_transport.
 image_transport_DIR:PATH=/opt/ros/noetic/share/image_transport/cmake
 
@@ -1369,6 +1375,9 @@ sensor_msgs_DIR:PATH=/opt/ros/noetic/share/sensor_msgs/cmake
 
 //The directory containing a CMake configuration file for smclib.
 smclib_DIR:PATH=/opt/ros/noetic/share/smclib/cmake
+
+//The directory containing a CMake configuration file for srd_msgs.
+srd_msgs_DIR:PATH=srd_msgs_DIR-NOTFOUND
 
 //The directory containing a CMake configuration file for std_msgs.
 std_msgs_DIR:PATH=/opt/ros/noetic/share/std_msgs/cmake
@@ -1619,7 +1628,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=12
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=13
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

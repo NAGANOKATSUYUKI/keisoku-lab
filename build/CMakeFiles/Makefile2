@@ -58,6 +58,7 @@ all: hsrb_samples/hsrb_web_user_interface_samples/all
 all: realsense-ros/realsense2_description/all
 all: sample/all
 all: darknet_ros/darknet_ros_msgs/all
+all: hsrc/all
 all: darknet_ros/darknet_ros/all
 all: hsrb_samples/hsrb_vision_samples/all
 all: realsense-ros/realsense2_camera/all
@@ -73,6 +74,7 @@ preinstall: hsrb_samples/hsrb_web_user_interface_samples/preinstall
 preinstall: realsense-ros/realsense2_description/preinstall
 preinstall: sample/preinstall
 preinstall: darknet_ros/darknet_ros_msgs/preinstall
+preinstall: hsrc/preinstall
 preinstall: darknet_ros/darknet_ros/preinstall
 preinstall: hsrb_samples/hsrb_vision_samples/preinstall
 preinstall: realsense-ros/realsense2_camera/preinstall
@@ -90,6 +92,7 @@ clean: hsrb_samples/hsrb_web_user_interface_samples/clean
 clean: realsense-ros/realsense2_description/clean
 clean: sample/clean
 clean: darknet_ros/darknet_ros_msgs/clean
+clean: hsrc/clean
 clean: darknet_ros/darknet_ros/clean
 clean: hsrb_samples/hsrb_vision_samples/clean
 clean: realsense-ros/realsense2_camera/clean
@@ -396,6 +399,24 @@ hsrb_samples/hsrb_web_user_interface_samples/preinstall:
 hsrb_samples/hsrb_web_user_interface_samples/clean:
 
 .PHONY : hsrb_samples/hsrb_web_user_interface_samples/clean
+
+#=============================================================================
+# Directory level rules for directory hsrc
+
+# Recursive "all" directory target.
+hsrc/all:
+
+.PHONY : hsrc/all
+
+# Recursive "preinstall" directory target.
+hsrc/preinstall:
+
+.PHONY : hsrc/preinstall
+
+# Recursive "clean" directory target.
+hsrc/clean:
+
+.PHONY : hsrc/clean
 
 #=============================================================================
 # Directory level rules for directory realsense-ros/realsense2_camera
