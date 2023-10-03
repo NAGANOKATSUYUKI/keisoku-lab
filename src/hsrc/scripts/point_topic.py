@@ -9,7 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class Detector():
     def __init__(self):
-
+        rospy.init_node("object_detector")
         self.cv_bridge = CvBridge()
         self.bbox = BoundingBox()
         self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.40)
@@ -20,16 +20,16 @@ class Detector():
 
     def DepthCallback(self, depth_image_data):
         try:
-            self.depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, "passthrough")
-            depth_x = int((self.bbox.xmax + self.bbox.xmin)// 2)
-            depth_y = int((self.bbox.ymax + self.bbox.ymin)// 2)
-            bbox_depth = self.depth_image[depth_y][depth_x]
-
             #中心座標
             w = self.bbox.xmax - self.bbox.xmin
             h = self.bbox.ymax - self.bbox.ymin
             x = self.bbox.xmin + w/2
             y = self.bbox.ymin + h/2
+
+            self.depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, "passthrough")
+            depth_x = int(x)
+            depth_y = int(y)
+            bbox_depth = self.depth_image[depth_y][depth_x]
 
             #topicとメッセージ値の作成
             pub = rospy.Publisher("point_topic", Point, queue_size=10)
@@ -39,6 +39,7 @@ class Detector():
             point_msg.z = bbox_depth
 
             pub.publish(point_msg)
+            rospy.loginfo('Published point: x={}, y={}, z={}'.format(point_msg.x, point_msg.y, point_msg.z))
 
         except CvBridgeError as e:
             rospy.logerr("Cvbridge error: %s", e)
@@ -52,7 +53,7 @@ class Detector():
                     bbox = bboxs[i]        
         self.bbox = bbox
 
-if __name__=="__main__":
+if __name__ == "__main__":
     try:
         Detector()
         rospy.spin()
