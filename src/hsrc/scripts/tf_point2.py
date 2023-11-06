@@ -46,3 +46,16 @@ class Tf_publish():
             # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.camera_coords[0],self.camera_coords[1], self.camera_coords[2])
         except :
             rospy.loginfo("Unable to create tf")
+
+if __name__=="__main__":
+    rospy.loginfo("Unable to create tf")
+    try:
+        
+        Tf_publish()
+        rospy.spin()
+
+    except rospy.ROSInterruptException:
+        pass
+
+
+#なぜか動かせない。しかもエラーがでない。謎

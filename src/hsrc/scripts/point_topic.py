@@ -26,6 +26,7 @@ class Detector():
             x = self.bbox.xmin + w/2
             y = self.bbox.ymin + h/2
 
+            #depth距離測定
             self.depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, "passthrough")
             depth_x = int(x)
             depth_y = int(y)
@@ -39,7 +40,7 @@ class Detector():
             point_msg.z = bbox_depth
 
             pub.publish(point_msg)
-            rospy.loginfo('Published point: x={}, y={}, z={}'.format(point_msg.x, point_msg.y, point_msg.z))
+            rospy.loginfo('Published point: x={}, y={}, z={}'.format(point_msg.x, point_msg.y, point_msg.z))#ピクセル単位の座標
 
         except CvBridgeError as e:
             rospy.logerr("Cvbridge error: %s", e)

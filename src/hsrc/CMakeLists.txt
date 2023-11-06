@@ -13,6 +13,10 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  darknet_ros_msgs
+  geometry_msgs
+  tf2_ros
+  tf2
 )
 
 ## System dependencies are found with CMake's conventions
@@ -206,3 +210,24 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(point_topic2 src/point_topic2.cpp)
+
+target_link_libraries(point_topic2
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+add_executable(tf_point2 src/tf_point2.cpp)
+
+target_link_libraries(tf_point2
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+add_executable(topic_tf_point src/topic_tf_point.cpp)
+
+target_link_libraries(topic_tf_point
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)

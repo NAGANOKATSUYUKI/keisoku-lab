@@ -29,7 +29,6 @@ class Detector(object):
             self.image = bridge.imgmsg_to_cv2(msg, "passthrough") # passthrough , bgr8 , mono8
 
             self.depth_data = self.image[int(self.yolo_y)][int(self.yolo_x)]
-            print("depth = ",self.depth_data)
 
             #topicとメッセージの作成
             pub = rospy.Publisher('point_topic', Point, queue_size=10)

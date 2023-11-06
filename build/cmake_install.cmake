@@ -130,18 +130,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/keisoku/catkin_ws/build/hsrb_samples/hsrb_samples/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/hsrb_samples/hsrb_web_user_interface_samples/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/realsense-ros/realsense2_description/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/sample/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/darknet_ros/darknet_ros_msgs/cmake_install.cmake")
   include("/home/keisoku/catkin_ws/build/hsrc/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/darknet_ros/darknet_ros/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/hsrb_samples/hsrb_vision_samples/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/realsense-ros/realsense2_camera/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/hsrb_samples/hsrb_mounted_devices_samples/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/usb-camera/cmake_install.cmake")
-  include("/home/keisoku/catkin_ws/build/hsrb_samples/hsrb_motion_samples/cmake_install.cmake")
 
 endif()
 

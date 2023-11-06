@@ -53,7 +53,9 @@ class Detector():
             depth_y = int((self.bbox.ymax + self.bbox.ymin) // 2)
             bbox_depth = self.depth_image[depth_y][depth_x]
 
-            rospy.loginfo("Class: %s  Score: %.2f  center: %.1f,%.1f  Dist: %dmm  count: %d" % (class_name, self.bbox.probability, x, y, bbox_depth,self.count))
+            # rospy.loginfo("Class: %s  Score: %.2f  center: %.1f,%.1f  Dist: %dmm  count: %d" % (class_name, self.bbox.probability, x, y, bbox_depth,self.count))
+            rospy.loginfo("  Score: %.2f  Dist: %lfmm  count: %d" % (self.bbox.probability, bbox_depth,self.count))
+
             # rospy.loginfo("color:width= %d, height= %d, depth:width= %d, height= %d" %(width, height, self.depth_width, self.depth_height ))
 
             #検出したものを円で囲む
@@ -68,10 +70,10 @@ class Detector():
             cv2.waitKey(1)
 
             # 平均深度距離
-            if 0 < bbox_depth <= 1000:   #0より大きく1000以下 
+            if 0 < bbox_depth <= 2500:   #0より大きく1000以下 
                 self.probability.append(self.bbox.probability)
                 self.depth_distance.append(bbox_depth)
-                self.count += 1
+                # self.count += 1
                 self.csv_writer.writerow([bbox_depth, self.bbox.probability]) #csv
             # if bbox_depth != 0:    
             #     if self.last_depth_distance is not None and abs(bbox_depth - self.last_depth_distance) < 50: #last_depth_distanceがNoneではなくかつ差が50mmない場合
@@ -81,19 +83,19 @@ class Detector():
             #         self.last_depth_distance = bbox_depth #うまくコードがつくれない
             #         self.count += 1
                     
-            if self.count >= 30:
-                self.average_probability = sum(self.probability) / len(self.probability)
-                self.average_depth_distance = sum(self.depth_distance) / len(self.depth_distance)
-                rospy.loginfo("信頼度： %.3f  平均深度距離： %dmm" % (self.average_probability, self.average_depth_distance))
+            # if self.count >= 30:
+            #     self.average_probability = sum(self.probability) / len(self.probability)
+            #     self.average_depth_distance = sum(self.depth_distance) / len(self.depth_distance)
+            #     rospy.loginfo("信頼度： %.3f  平均深度距離： %dmm" % (self.average_probability, self.average_depth_distance))
                 
-                # csv
-                self.csv_writer.writerow([])
-                self.csv_writer.writerow([ self.average_depth_distance, self.average_probability])
-                self.csv_writer.writerow([])
+            #     # csv
+            #     self.csv_writer.writerow([])
+            #     self.csv_writer.writerow([ self.average_depth_distance, self.average_probability])
+            #     self.csv_writer.writerow([])
 
-                self.depth_distance = []
-                self.probability = []
-                self.count = 0
+            #     self.depth_distance = []
+            #     self.probability = []
+            #     self.count = 0
 
         else :
             cv2.imshow("cam_image", cam_image)

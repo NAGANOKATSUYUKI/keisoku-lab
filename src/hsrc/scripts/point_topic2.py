@@ -85,3 +85,4 @@ class Detector():
         self.bbox = bbox
 
         
+        #なぜか動かせない。しかもエラーがでない。謎
