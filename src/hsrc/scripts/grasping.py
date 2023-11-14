@@ -76,6 +76,7 @@ if __name__=='__main__':
                                 whole_body.move_end_effector_pose(geometry.pose(z = 0.1), _HAND_TF)
                                 # 力を指定して把持する
                                 gripper.apply_force(_GRASP_FORCE, delicate = True)
+                                rospy.loginfo("Bottle --> Grasp")
 
                                 rospy.sleep(1.0)
                                 # 手先相対で上にハンドを移動
@@ -86,11 +87,14 @@ if __name__=='__main__':
                         
                                 # 初期位置に移動
                                 omni_base.go_abs(0.0, 0.0, 0.0, 300.0)
+                                rospy.loginfo("初期位置 --> OK")
                                 # 物体を右の箱に入れる想定
                                 omni_base.go_rel(0.0, 0.0, -1.57, 100.0)#右向く
                                 gripper.command(1.0)
+                                rospy.loginfo("箱に入れる --> OK")
                                 omni_base.go_rel(0.0, 0.0, 1.57, 100.0)#左向く
                                 whole_body.move_to_go()
+                                rospy.loginfo("リセット --> OK")
                                 # whole_body.move_to_joint_positions({"head_tilt_joint": -0.3})
                         
                         # 値の初期化

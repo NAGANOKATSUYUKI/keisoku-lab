@@ -22,11 +22,9 @@ public:
         sum_x = 0;
         sum_y = 0;
         sum_z = 0;
-        
-        sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
-        sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
-        sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
 
+        //検出されて初めてサブスクライブする方法
+        sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
     }
 
     //target detection
@@ -38,9 +36,6 @@ public:
                 if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
                     bbox = bboxs[i];
                     class_name = bbox.Class;
-                    // if (bboxs[i].Class == "can" && bboxs[i].probability >= pub_threshold) {
-                    //     bbox = bboxs[i];
-                    // }
                 }
             }
         }
@@ -60,25 +55,31 @@ public:
         //         class_name = bbox.Class;
         //     }
         // }
-        if (!bboxs.empty()){
-            cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
-            cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
-        }else{
-            cam_x = 0;
-            cam_y = 0;   
-        }
+        
+        cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
+        cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
+        sub_swich = 1;
+        sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
         // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
     }
 
     //depth 
     void DepthCallback(const sensor_msgs::Image::ConstPtr& depth_image_data) {
         try {
-            cv_bridge::CvImagePtr cv_ptr;
-            cv_ptr = cv_bridge::toCvCopy(depth_image_data, sensor_msgs::image_encodings::TYPE_32FC1);
-            int depth_x = static_cast<int>(cam_x);
-            int depth_y = static_cast<int>(cam_y);
-            bbox_depth = cv_ptr->image.at<float>(depth_y, depth_x);
-            // ROS_INFO("%d, %d, %f", depth_x, depth_y, bbox_depth);
+            if ( sub_swich == 1) {
+                cv_bridge::CvImagePtr cv_ptr;
+                cv_ptr = cv_bridge::toCvCopy(depth_image_data, sensor_msgs::image_encodings::TYPE_32FC1);
+                int depth_x = static_cast<int>(cam_x);
+                int depth_y = static_cast<int>(cam_y);
+                bbox_depth = cv_ptr->image.at<float>(depth_y, depth_x);
+                // ROS_INFO("%d, %d, %f", depth_x, depth_y, bbox_depth);
+                sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
+                sub_swich = 0;
+            } 
+            else{
+                sub_cam_depth.shutdown();
+                sub_camera_info.shutdown();
+            }
         }
         catch (cv_bridge::Exception& e) {
             ROS_ERROR("Cvbridge error: %s", e.what());
@@ -109,7 +110,7 @@ public:
             //topic Publish
             try {
                 geometry_msgs::Point point_msg;
-                if (0.40 < z && z <= 1.30){
+                if (0.40 < z && z <= 2.0){
                     CoordinatePointCallback();
                     sum_x = sum_x + x;
                     sum_y = sum_y + y;
@@ -179,7 +180,7 @@ private:
     cv_bridge::CvImagePtr cv_bridge;
     darknet_ros_msgs::BoundingBox bbox;
     double pub_threshold;
-    int cam_x, cam_y, i;
+    int cam_x, cam_y, i, sub_swich;
     float bbox_depth, z;
     float crrection_x , crrection_y, x, y;
     float x1, y1;
@@ -196,3 +197,4 @@ int main(int argc, char** argv) {
 
 //1109
 //1113
+//1114
