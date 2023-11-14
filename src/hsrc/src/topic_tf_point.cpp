@@ -17,15 +17,57 @@ public:
         pub_threshold = ros::param::param("~pub_threshold", 0.40);
         pub = nh.advertise<geometry_msgs::Point>("point_topic", 10);
 
-        sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
-        sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
-        sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
-
         //average_variable
         i = 0;
         sum_x = 0;
         sum_y = 0;
         sum_z = 0;
+        
+        sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
+        sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
+        sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
+
+    }
+
+    //target detection
+    void DarknetBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
+        darknet_ros_msgs::BoundingBox bbox;
+        const std::vector<darknet_ros_msgs::BoundingBox>& bboxs = darknet_bboxs->bounding_boxes;
+        if (bboxs.size() != 0) {
+            for (int i = 0; i < bboxs.size(); i++) {
+                if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
+                    bbox = bboxs[i];
+                    class_name = bbox.Class;
+                    // if (bboxs[i].Class == "can" && bboxs[i].probability >= pub_threshold) {
+                    //     bbox = bboxs[i];
+                    // }
+                }
+            }
+        }
+        // if (bboxs.size() != 0) {
+        //     darknet_ros_msgs::BoundingBox best_bottle; // 最も信頼性の高い "bottle" オブジェクトを格納する変数
+        //     double best_bottle_probability = 0.0; // 最も信頼性の高い "bottle" オブジェクトの信頼度
+        //     for (int i = 0; i < bboxs.size(); i++) {
+        //         if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
+        //             if (bboxs[i].probability > best_bottle_probability) {
+        //                 best_bottle = bboxs[i]; // より高い信頼性の "bottle" オブジェクトを選択
+        //                 best_bottle_probability = bboxs[i].probability; // 信頼度を更新
+        //             }
+        //         }
+        //     }
+        //     if (best_bottle_probability > 0.0) {
+        //         bbox = best_bottle;
+        //         class_name = bbox.Class;
+        //     }
+        // }
+        if (!bboxs.empty()){
+            cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
+            cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
+        }else{
+            cam_x = 0;
+            cam_y = 0;   
+        }
+        // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
     }
 
     //depth 
@@ -45,97 +87,59 @@ public:
 
     //座標軸変換
     void CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& info_msg) {
-        try {
-            crrection_x = cam_x - info_msg->K[2];//320
-            crrection_y = cam_y - info_msg->K[5];//280
-            z = bbox_depth;
-            x1 = z * (crrection_x / info_msg->K[0]);
-            y1 = z * (crrection_y / info_msg->K[4]);
-            x = x1 * 0.001 ;
-            y = y1 * 0.001 + 0.2 * y1 *0.001;
-            z = z * 0.001;
-            // ROS_INFO("x = %.2f, y = %.2f, z = %.2f", x, y, z);
-        }
-        catch (...) {
-            ROS_INFO("NO_1");
-        }
 
-        //topic Publish
-        try {
-            geometry_msgs::Point point_msg;
-            if (0.40 < z && z <= 1.50){
-                CoordinatePointCallback();
-                sum_x = sum_x + x;
-                sum_y = sum_y + y;
-                sum_z = sum_z + z;
-                i = i + 1;
-                ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
-            }else{
-                ROS_WARN("class:%s x = %.2f y = %.2f z = %.2f", class_name.c_str(), x, y, z);
+        //検出しないときは通さない
+        if(cam_x != 0.0 && cam_y != 0.0 || cam_x > cam_y ){
+
+            try {
+                crrection_x = cam_x - info_msg->K[2];//320
+                crrection_y = cam_y - info_msg->K[5];//280
+                z = bbox_depth;
+                x1 = z * (crrection_x / info_msg->K[0]);
+                y1 = z * (crrection_y / info_msg->K[4]);
+                x = x1 * 0.001 ;
+                y = y1 * 0.001 + 0.2 * y1 *0.001;
+                z = z * 0.001;
+                // ROS_INFO("x = %.2f, y = %.2f, z = %.2f", x, y, z);
+            }
+            catch (...) {
+                ROS_WARN("transform_ERROR");
             }
 
-            if (i == 30){
-                x = sum_x / 30;
-                y = sum_y / 30; 
-                z = sum_z / 30;
-                sum_x = 0;
-                sum_y = 0;
-                sum_z = 0;
-                point_msg.x = x;
-                point_msg.y = y;
-                point_msg.z = z;
-                pub.publish(point_msg);
-                i = 0;
-            }
-        }
-        catch (...) {
-            ROS_INFO("NO_2");
-        }
-    }
-
-    //target detection
-    void DarknetBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
-        darknet_ros_msgs::BoundingBox bbox;
-        const std::vector<darknet_ros_msgs::BoundingBox>& bboxs = darknet_bboxs->bounding_boxes;
-        // if (bboxs.size() != 0) {
-        //     for (int i = 0; i < bboxs.size(); i++) {
-        //         if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
-        //             bbox = bboxs[i];
-        //             class_name = bbox.Class;
-        //             if (bboxs[i].Class == "can" && bboxs[i].probability >= pub_threshold) {
-        //                 bbox = bboxs[i];
-        //             }
-        //         }
-        //     }
-        // }
-        if (bboxs.size() != 0) {
-            darknet_ros_msgs::BoundingBox best_bottle; // 最も信頼性の高い "bottle" オブジェクトを格納する変数
-            double best_bottle_probability = 0.0; // 最も信頼性の高い "bottle" オブジェクトの信頼度
-
-            for (int i = 0; i < bboxs.size(); i++) {
-                if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
-                    if (bboxs[i].probability > best_bottle_probability) {
-                        best_bottle = bboxs[i]; // より高い信頼性の "bottle" オブジェクトを選択
-                        best_bottle_probability = bboxs[i].probability; // 信頼度を更新
-                    }
+            //topic Publish
+            try {
+                geometry_msgs::Point point_msg;
+                if (0.40 < z && z <= 1.30){
+                    CoordinatePointCallback();
+                    sum_x = sum_x + x;
+                    sum_y = sum_y + y;
+                    sum_z = sum_z + z;
+                    i = i + 1;
+                    ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
+                }else{
+                    // ROS_WARN("class:%s x = %.2f y = %.2f z = %.2f", class_name.c_str(), x, y, z);
                 }
-                if (bboxs[i].Class == "can" && bboxs[i].probability >= pub_threshold) {
-                    if (bboxs[i].probability > best_bottle_probability) {
-                        best_bottle = bboxs[i]; // より高い信頼性の "can" オブジェクトを選択
-                        best_bottle_probability = bboxs[i].probability; // 信頼度を更新
-                    }
+
+                if (i == 30){
+                    x = sum_x / 30;
+                    y = sum_y / 30; 
+                    z = sum_z / 30;
+                    sum_x = 0;
+                    sum_y = 0;
+                    sum_z = 0;
+                    point_msg.x = x;
+                    point_msg.y = y;
+                    point_msg.z = z;
+                    pub.publish(point_msg);
+                    i = 0;
                 }
             }
-            if (best_bottle_probability > 0.0) {
-                bbox = best_bottle;
-                class_name = bbox.Class;
+            catch (...) {
+                ROS_WARN("TopicPublish_ERROR");
             }
-        }
-        int w = bbox.xmax - bbox.xmin;
-        int h = bbox.ymax - bbox.ymin;
-        cam_x = bbox.xmin + w / 2;
-        cam_y = bbox.ymin + h / 2;
-        // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
+        }else{
+            ROS_WARN("Not Detection");
+        }    
     }
 
     //tf作成
@@ -177,7 +181,7 @@ private:
     double pub_threshold;
     int cam_x, cam_y, i;
     float bbox_depth, z;
-    float crrection_x , x, crrection_y ,y;
+    float crrection_x , crrection_y, x, y;
     float x1, y1;
     float sum_x,sum_y,sum_z;
     std:: string class_name;
@@ -189,3 +193,6 @@ int main(int argc, char** argv) {
     ros::spin();
     return 0;
 }
+
+//1109
+//1113

@@ -19,7 +19,7 @@ class Tf_publish():
 
         gt = TransformStamped()
         gt.header.stamp = rospy.Time.now()
-        gt.header.frame_id = "head_rgbd_sensor_link"#原点
+        gt.header.frame_id = "camera_aligned_depth_to_color_frame"#原点
         gt.child_frame_id = "target_frame"#対象
         gt.transform.translation.x = self.camera_coords[0]
         gt.transform.translation.y = self.camera_coords[1]
@@ -36,19 +36,14 @@ class Tf_publish():
     #座標の指定
     def CoordinatePoint_callback(self, coordinate_msg):
         try:
-            if coordinate_msg.x != 0.0 and coordinate_msg.y != 0.0 or coordinate_msg.x > coordinate_msg.y :
-                if coordinate_msg.z < 1.3 :
-                    self.camera_coords[0] =  coordinate_msg.x
-                    self.camera_coords[1] =  coordinate_msg.y
-                    self.camera_coords[2] =  coordinate_msg.z
+            
+            self.camera_coords[0] =  coordinate_msg.x
+            self.camera_coords[1] =  coordinate_msg.y
+            self.camera_coords[2] =  coordinate_msg.z
 
-                    self.tf_publish()
-                    # rospy.loginfo("tf_publish --> OK")
-                    rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.camera_coords[0],self.camera_coords[1], self.camera_coords[2])
-                else:
-                    rospy.logwarn("tf_publish --> NG")
-            else:
-                rospy.logwarn("tf_publish --> NG")
+            self.tf_publish()
+            rospy.loginfo("tf_publish --> OK")
+            # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.camera_coords[0],self.camera_coords[1], self.camera_coords[2])
         except :
             rospy.loginfo("Unable to create tf")
 
@@ -63,4 +58,4 @@ if __name__=="__main__":
         pass
 
 
-#1113
+#なぜか動かせない。しかもエラーがでない。謎

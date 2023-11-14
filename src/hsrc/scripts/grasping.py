@@ -34,15 +34,17 @@ camera_coords = [0.0,0.0,0.0]
 
 def CoordinatePoint_callback(coordinate_msg):
         try:
-            
-            camera_coords[0] =  coordinate_msg.x
-            camera_coords[1] =  coordinate_msg.y
-            camera_coords[2] =  coordinate_msg.z
-
-            rospy.loginfo("x= %0.2f, y= %0.2f, z=%0.2f", camera_coords[0],camera_coords[1], camera_coords[2])
+            if coordinate_msg.x != 0.0 and coordinate_msg.y != 0.0 or coordinate_msg.x > coordinate_msg.y :
+                
+                camera_coords[0] =  coordinate_msg.x
+                camera_coords[1] =  coordinate_msg.y
+                camera_coords[2] =  coordinate_msg.z
+                # rospy.loginfo("x= %0.2f, y= %0.2f, z=%0.2f", camera_coords[0],camera_coords[1], camera_coords[2])
+                
+            else:
+                rospy.logwarn("tf_publish --> NG")
         except :
             rospy.loginfo("Unable to create tf")
-
 
 if __name__=='__main__':
     
@@ -55,17 +57,18 @@ if __name__=='__main__':
     rate = rospy.Rate(10)  # ループの周波数（10Hzを指定）
     while not rospy.is_shutdown():
         rate.sleep()
-        if 1.5 > camera_coords[2] > 0.5:
+        if 1.3 > camera_coords[2] > 0.4:
                 try:
+                        rospy.loginfo("Grasp --> OK")
+                        rospy.loginfo("x= %0.2f, y= %0.2f, z=%0.2f", camera_coords[0],camera_coords[1], camera_coords[2])
                         gripper.command(0.0)
                         gripper.command(1.0)
-                        # whole_body.move_to_neutral()
-                except:
-                        # tts.say('初期化失敗')
-                        rospy.logerr('fail to init')
-
-                try:
-                        if 1.5 > camera_coords[2] > 0.5:
+                        whole_body.move_to_neutral()
+                        whole_body.move_to_joint_positions({'arm_lift_joint': 0.2})
+                        whole_body.move_to_joint_positions({"head_tilt_joint": -0.2})
+                        rospy.sleep(6.0)
+                
+                        if 1.3 > camera_coords[2] > 0.4:
                                 # 遷移後に手先を見るようにする
                                 # whole_body.looking_hand_constraint = True
                                 # ペットボトルの手前に手を持ってくる
@@ -74,13 +77,12 @@ if __name__=='__main__':
                                 # 力を指定して把持する
                                 gripper.apply_force(_GRASP_FORCE, delicate = True)
 
-                                rospy.sleep(2.0)
+                                rospy.sleep(1.0)
                                 # 手先相対で上にハンドを移動
                                 whole_body.move_end_effector_pose(hand_up, _HAND_TF)
                                 # 手先相対で後ろにハンドを移動
                                 whole_body.move_end_effector_pose(hand_back, _HAND_TF)
                                 whole_body.move_to_neutral()
-                                rospy.sleep(2.0)
                         
                                 # 初期位置に移動
                                 omni_base.go_abs(0.0, 0.0, 0.0, 300.0)
@@ -90,9 +92,22 @@ if __name__=='__main__':
                                 omni_base.go_rel(0.0, 0.0, 1.57, 100.0)#左向く
                                 whole_body.move_to_go()
                                 # whole_body.move_to_joint_positions({"head_tilt_joint": -0.3})
+                        
+                        # 値の初期化
+                        camera_coords[0] = 0.0
+                        camera_coords[1] = 0.0
+                        camera_coords[2] = 0.0
+                        # rospy.loginfo("x= %0.2f, y= %0.2f, z=%0.2f", camera_coords[0],camera_coords[1], camera_coords[2])
+
                 except:
                         # tts.say('把持失敗')
-                        rospy.logerr('fail to grasp')
-                        break  # ループを終了してプログラムを終了
+                        rospy.logwarn('fail to grasp')
+                        whole_body.move_to_neutral()#体を上方向にあげた分
+                        # 値の初期化
+                        camera_coords[0] = 0.0
+                        camera_coords[1] = 0.0
+                        camera_coords[2] = 0.0
+                        rospy.logwarn("x= %0.2f, y= %0.2f, z=%0.2f", camera_coords[0],camera_coords[1], camera_coords[2])
+                        # break  # ループを終了してプログラムを終了
 
-                
+#1113

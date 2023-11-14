@@ -42,14 +42,14 @@ if __name__=='__main__':
         if user_input == "e":
                 try:
                         gripper.command(1.0)
-                        whole_body.move_to_go()
+                        # whole_body.move_to_go()
                 except:
                         tts.say('初期化に失敗')
                         rospy.logerr('fail to init')
 
                 try:
                         # 把持用初期姿勢に遷移
-                        whole_body.move_to_neutral()
+                        # whole_body.move_to_neutral()
                         # 遷移後に手先を見るようにする
                         whole_body.looking_hand_constraint = True
                         # ペットボトルの手前に手を持ってくる
