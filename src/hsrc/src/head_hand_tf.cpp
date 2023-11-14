@@ -23,7 +23,7 @@ public:
         sum_y = 0;
         sum_z = 0;
 
-        //検出されて初めてサブスクライブする方法
+        //検出されて初めてサブスクライブ
         sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
     }
 
@@ -66,7 +66,7 @@ public:
     //depth 
     void DepthCallback(const sensor_msgs::Image::ConstPtr& depth_image_data) {
         try {
-            if ( sub_swich == true) {
+            if ( sub_swich ) {
                 cv_bridge::CvImagePtr cv_ptr;
                 cv_ptr = cv_bridge::toCvCopy(depth_image_data, sensor_msgs::image_encodings::TYPE_32FC1);
                 int depth_x = static_cast<int>(cam_x);

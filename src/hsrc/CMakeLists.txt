@@ -231,3 +231,10 @@ target_link_libraries(topic_tf_point
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
+
+add_executable(head_hand_tf src/head_hand_tf.cpp)
+
+target_link_libraries(head_hand_tf
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
