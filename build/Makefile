@@ -274,6 +274,19 @@ actionlib_msgs_generate_messages_lisp/fast:
 .PHONY : actionlib_msgs_generate_messages_lisp/fast
 
 #=============================================================================
+# Target rules for targets named head_hand_tf
+
+# Build rule for target.
+head_hand_tf: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 head_hand_tf
+.PHONY : head_hand_tf
+
+# fast build rule for target.
+head_hand_tf/fast:
+	$(MAKE) -f hsrc/CMakeFiles/head_hand_tf.dir/build.make hsrc/CMakeFiles/head_hand_tf.dir/build
+.PHONY : head_hand_tf/fast
+
+#=============================================================================
 # Target rules for targets named actionlib_generate_messages_eus
 
 # Build rule for target.
@@ -827,6 +840,7 @@ help:
 	@echo "... actionlib_generate_messages_py"
 	@echo "... actionlib_msgs_generate_messages_nodejs"
 	@echo "... actionlib_msgs_generate_messages_lisp"
+	@echo "... head_hand_tf"
 	@echo "... actionlib_generate_messages_eus"
 	@echo "... actionlib_msgs_generate_messages_cpp"
 	@echo "... tf2_msgs_generate_messages_cpp"

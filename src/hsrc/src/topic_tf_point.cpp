@@ -30,14 +30,18 @@ public:
     //target detection
     void DarknetBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
         darknet_ros_msgs::BoundingBox bbox;
-        const std::vector<darknet_ros_msgs::BoundingBox>& bboxs = darknet_bboxs->bounding_boxes;
-        if (bboxs.size() != 0) {
-            for (int i = 0; i < bboxs.size(); i++) {
-                if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
-                    bbox = bboxs[i];
+        const std::vector<darknet_ros_msgs::BoundingBox>& head_bboxs = darknet_bboxs->bounding_boxes;
+        if (head_bboxs.size() != 0) {
+            for (int i = 0; i < head_bboxs.size(); i++) {
+                if (head_bboxs[i].Class == "bottle" && head_bboxs[i].probability >= pub_threshold) {
+                    bbox = head_bboxs[i];
                     class_name = bbox.Class;
+                }else{
+                    //
                 }
             }
+        }else{
+            //
         }
         // if (bboxs.size() != 0) {
         //     darknet_ros_msgs::BoundingBox best_bottle; // 最も信頼性の高い "bottle" オブジェクトを格納する変数
@@ -75,8 +79,7 @@ public:
                 // ROS_INFO("%d, %d, %f", depth_x, depth_y, bbox_depth);
                 sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
                 sub_swich = false;
-            } 
-            else{
+            }else{
                 sub_cam_depth.shutdown();
                 sub_camera_info.shutdown();
             }
@@ -91,7 +94,6 @@ public:
 
         //検出しないときは通さない
         if(cam_x != 0.0 && cam_y != 0.0 || cam_x > cam_y ){
-
             try {
                 crrection_x = cam_x - info_msg->K[2];//320
                 crrection_y = cam_y - info_msg->K[5];//280
@@ -110,15 +112,19 @@ public:
             //topic Publish
             try {
                 geometry_msgs::Point point_msg;
-                if (0.40 < z && z <= 2.0){
-                    CoordinatePointCallback();
-                    sum_x = sum_x + x;
-                    sum_y = sum_y + y;
-                    sum_z = sum_z + z;
-                    i = i + 1;
-                    ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
+                if (0.40 < z && z <= 1.5){          //距離の制限
+                    if (-0.4 < x && x < 0.4){       //　幅の制限
+                        CoordinatePointCallback();
+                        sum_x = sum_x + x;
+                        sum_y = sum_y + y;
+                        sum_z = sum_z + z;
+                        i = i + 1;
+                        ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
+                    }else{
+                        ROS_WARN("Out of range");
+                    }
                 }else{
-                    // ROS_WARN("class:%s x = %.2f y = %.2f z = %.2f", class_name.c_str(), x, y, z);
+                    ROS_WARN("Distance over");
                 }
 
                 if (i == 30){
@@ -133,6 +139,8 @@ public:
                     point_msg.z = z;
                     pub.publish(point_msg);
                     i = 0;
+                }else{
+                    //
                 }
             }
             catch (...) {

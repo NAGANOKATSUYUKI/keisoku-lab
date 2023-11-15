@@ -23,50 +23,73 @@ public:
         sum_y = 0;
         sum_z = 0;
 
-        //検出されて初めてサブスクライブ
-        sub_darknet_bbox = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Tfpoint_Detector::DarknetBboxCallback, this);
+        //検出されて初めてサブスクライブする方法
+        
+        sub_hand_bbox = nh.subscribe("/darknet_ros1/bounding_boxes", 1, &Tfpoint_Detector::HandBboxCallback, this);
+        sub_head_bbox = nh.subscribe("/darknet_ros0/bounding_boxes", 1, &Tfpoint_Detector::HeadBboxCallback, this);
     }
 
     //target detection
-    void DarknetBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
+    void HandBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
         darknet_ros_msgs::BoundingBox bbox;
-        const std::vector<darknet_ros_msgs::BoundingBox>& bboxs = darknet_bboxs->bounding_boxes;
-        if (bboxs.size() != 0) {
-            for (int i = 0; i < bboxs.size(); i++) {
-                if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
-                    bbox = bboxs[i];
+        const std::vector<darknet_ros_msgs::BoundingBox>& hand_bboxs = darknet_bboxs->bounding_boxes;
+        if (hand_bboxs.size() != 0) {
+            for (int i = 0; i < hand_bboxs.size(); i++) {
+                if (hand_bboxs[i].Class == "bottle" && hand_bboxs[i].probability >= pub_threshold) {
+                    bbox = hand_bboxs[i];
                     class_name = bbox.Class;
+                }else{
+                    //
                 }
             }
+        }else{
+            //
         }
-        // if (bboxs.size() != 0) {
-        //     darknet_ros_msgs::BoundingBox best_bottle; // 最も信頼性の高い "bottle" オブジェクトを格納する変数
-        //     double best_bottle_probability = 0.0; // 最も信頼性の高い "bottle" オブジェクトの信頼度
-        //     for (int i = 0; i < bboxs.size(); i++) {
-        //         if (bboxs[i].Class == "bottle" && bboxs[i].probability >= pub_threshold) {
-        //             if (bboxs[i].probability > best_bottle_probability) {
-        //                 best_bottle = bboxs[i]; // より高い信頼性の "bottle" オブジェクトを選択
-        //                 best_bottle_probability = bboxs[i].probability; // 信頼度を更新
-        //             }
-        //         }
-        //     }
-        //     if (best_bottle_probability > 0.0) {
-        //         bbox = best_bottle;
-        //         class_name = bbox.Class;
-        //     }
-        // }
-        
+        head_cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
+        head_cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
+        // sub_hand_swich = true;
+        // sub_head_bbox = nh.subscribe("/darknet_ros0/bounding_boxes", 1, &Tfpoint_Detector::HeadBboxCallback, this);
+        ROS_INFO("x = %.2d, y = %.2d", head_cam_x, head_cam_y);
+
+    }
+
+    void HeadBboxCallback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& darknet_bboxs) {
+        darknet_ros_msgs::BoundingBox bbox;
+        const std::vector<darknet_ros_msgs::BoundingBox>& head_bboxs = darknet_bboxs->bounding_boxes;
+        if (head_bboxs.size() != 0) {
+            for (int i = 0; i < head_bboxs.size(); i++) {
+                if (head_bboxs[i].Class == "bottle" && head_bboxs[i].probability >= pub_threshold) {
+                    bbox = head_bboxs[i];
+                    class_name = bbox.Class;
+                }else{
+                    //
+                }
+            }
+        }else{
+            //
+        }
         cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
         cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
-        sub_swich = true;
+        sub_head_swich = true;
         sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
-        // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
+        ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
+
+        // if (sub_hand_swich){
+        //     cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
+        //     cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
+        //     sub_head_swich = true;
+        //     sub_cam_depth = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/image_raw", 1, &Tfpoint_Detector::DepthCallback, this);
+        //     // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
+        //     sub_hand_swich = false;
+        // }else{
+        //     sub_head_bbox.shutdown();
+        // }
     }
 
     //depth 
     void DepthCallback(const sensor_msgs::Image::ConstPtr& depth_image_data) {
         try {
-            if ( sub_swich ) {
+            if ( sub_head_swich == true) {
                 cv_bridge::CvImagePtr cv_ptr;
                 cv_ptr = cv_bridge::toCvCopy(depth_image_data, sensor_msgs::image_encodings::TYPE_32FC1);
                 int depth_x = static_cast<int>(cam_x);
@@ -74,9 +97,8 @@ public:
                 bbox_depth = cv_ptr->image.at<float>(depth_y, depth_x);
                 // ROS_INFO("%d, %d, %f", depth_x, depth_y, bbox_depth);
                 sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
-                sub_swich = false;
-            } 
-            else{
+                sub_head_swich = false;
+            }else{
                 sub_cam_depth.shutdown();
                 sub_camera_info.shutdown();
             }
@@ -91,7 +113,6 @@ public:
 
         //検出しないときは通さない
         if(cam_x != 0.0 && cam_y != 0.0 || cam_x > cam_y ){
-
             try {
                 crrection_x = cam_x - info_msg->K[2];//320
                 crrection_y = cam_y - info_msg->K[5];//280
@@ -110,15 +131,19 @@ public:
             //topic Publish
             try {
                 geometry_msgs::Point point_msg;
-                if (0.40 < z && z <= 2.0){
-                    CoordinatePointCallback();
-                    sum_x = sum_x + x;
-                    sum_y = sum_y + y;
-                    sum_z = sum_z + z;
-                    i = i + 1;
-                    ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
+                if (0.40 < z && z <= 1.5){          //距離の制限
+                    if (-0.4 < x && x < 0.4){       //　幅の制限
+                        CoordinatePointCallback();
+                        sum_x = sum_x + x;
+                        sum_y = sum_y + y;
+                        sum_z = sum_z + z;
+                        i = i + 1;
+                        // ROS_INFO("class:%s x = %.2f y = %.2f z = %.2f %d", class_name.c_str(), x, y, z, i);
+                    }else{
+                        ROS_WARN("Out of range");
+                    }
                 }else{
-                    // ROS_WARN("class:%s x = %.2f y = %.2f z = %.2f", class_name.c_str(), x, y, z);
+                    ROS_WARN("Distance over");
                 }
 
                 if (i == 30){
@@ -133,6 +158,8 @@ public:
                     point_msg.z = z;
                     pub.publish(point_msg);
                     i = 0;
+                }else{
+                    //
                 }
             }
             catch (...) {
@@ -173,20 +200,20 @@ public:
 
 private:
     ros::Publisher pub; 
+    ros::Subscriber sub_head_bbox, sub_hand_bbox;
     ros::Subscriber sub_cam_depth;
-    ros::Subscriber sub_darknet_bbox;
     ros::Subscriber sub_camera_info;
     ros::NodeHandle nh;
     cv_bridge::CvImagePtr cv_bridge;
     darknet_ros_msgs::BoundingBox bbox;
     double pub_threshold;
-    int cam_x, cam_y, i;
+    int head_cam_x, head_cam_y, cam_x, cam_y, i;
     float bbox_depth, z;
     float crrection_x , crrection_y, x, y;
     float x1, y1;
     float sum_x,sum_y,sum_z;
     std:: string class_name;
-    bool sub_swich;
+    bool sub_head_swich, sub_hand_swich;
 };
 
 int main(int argc, char** argv) {

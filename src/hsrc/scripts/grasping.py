@@ -86,7 +86,7 @@ if __name__=='__main__':
                                 whole_body.move_to_neutral()
                         
                                 # 初期位置に移動
-                                omni_base.go_abs(0.0, 0.0, 0.0, 300.0)
+                                omni_base.go_abs(0.0, 0.0, 0.0, 200.0)
                                 rospy.loginfo("初期位置 --> OK")
                                 # 物体を右の箱に入れる想定
                                 omni_base.go_rel(0.0, 0.0, -1.57, 100.0)#右向く

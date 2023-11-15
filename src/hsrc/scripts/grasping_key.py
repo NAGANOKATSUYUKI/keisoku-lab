@@ -21,7 +21,7 @@ gripper = robot.get('gripper')
 tts = robot.get('default_tts')
 
 # bottleのマーカの手前0.02[m],z軸回に-1.57回転させた姿勢
-bottle_to_hand = geometry.pose(z=-0.02, ek=-1.57)
+bottle_to_hand = geometry.pose(z=-0.15, ek=-1.57)
 
 # handを0.1[m]上に移動させる姿勢
 hand_up = geometry.pose(x=0.1)
@@ -54,6 +54,7 @@ if __name__=='__main__':
                         whole_body.looking_hand_constraint = True
                         # ペットボトルの手前に手を持ってくる
                         whole_body.move_end_effector_pose(bottle_to_hand, _BOTTLE_TF)
+                        whole_body.move_end_effector_pose(geometry.pose(z = 0.1), _HAND_TF)
                         # 力を指定して把持する
                         gripper.apply_force(_GRASP_FORCE)
                         # 手先相対で上にハンドを移動
