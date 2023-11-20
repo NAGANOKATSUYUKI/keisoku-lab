@@ -183,6 +183,19 @@ download_extra_data/fast:
 .PHONY : download_extra_data/fast
 
 #=============================================================================
+# Target rules for targets named hand_msg
+
+# Build rule for target.
+hand_msg: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 hand_msg
+.PHONY : hand_msg
+
+# fast build rule for target.
+hand_msg/fast:
+	$(MAKE) -f hsrc/CMakeFiles/hand_msg.dir/build.make hsrc/CMakeFiles/hand_msg.dir/build
+.PHONY : hand_msg/fast
+
+#=============================================================================
 # Target rules for targets named topic_tf_point
 
 # Build rule for target.
@@ -677,6 +690,19 @@ std_msgs_generate_messages_nodejs/fast:
 .PHONY : std_msgs_generate_messages_nodejs/fast
 
 #=============================================================================
+# Target rules for targets named head_msg
+
+# Build rule for target.
+head_msg: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 head_msg
+.PHONY : head_msg
+
+# fast build rule for target.
+head_msg/fast:
+	$(MAKE) -f hsrc/CMakeFiles/head_msg.dir/build.make hsrc/CMakeFiles/head_msg.dir/build
+.PHONY : head_msg/fast
+
+#=============================================================================
 # Target rules for targets named tf2_msgs_generate_messages_eus
 
 # Build rule for target.
@@ -833,6 +859,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... doxygen"
 	@echo "... download_extra_data"
+	@echo "... hand_msg"
 	@echo "... topic_tf_point"
 	@echo "... tf2_msgs_generate_messages_nodejs"
 	@echo "... tf2_msgs_generate_messages_lisp"
@@ -871,6 +898,7 @@ help:
 	@echo "... tf_point2"
 	@echo "... geometry_msgs_generate_messages_eus"
 	@echo "... std_msgs_generate_messages_nodejs"
+	@echo "... head_msg"
 	@echo "... tf2_msgs_generate_messages_eus"
 	@echo "... roscpp_generate_messages_eus"
 	@echo "... rosgraph_msgs_generate_messages_eus"
