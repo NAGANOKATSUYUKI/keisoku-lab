@@ -8,21 +8,21 @@ from darknet_ros_msgs.msg import BoundingBoxes, BoundingBox
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import CameraInfo
 
-
 class Detector():
     def __init__(self):
-        rospy.init_node("Point_topic")
+        rospy.init_node("Point_head_topic")
         self.cv_bridge = CvBridge()
         self.bbox = BoundingBox()
-        self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.50)
+        self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.20)
 
         self.cam_x = 0.0
         self.cam_y = 0.0
 
         sub_cam_depth     = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_raw", Image, self.DepthCallback)
-        sub_cam_info      = rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/camera_info", CameraInfo, self.CameraInfo_callback)
-        sub_darknet_bbox  = rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.DarknetBboxCallback)
+        sub_cam_info      = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/camera_info", CameraInfo, self.CameraInfo_callback)
+        sub_darknet_bbox  = rospy.Subscriber("/darknet_ros0/bounding_boxes", BoundingBoxes, self.DarknetBboxCallback)
 
+    #検出
     def DarknetBboxCallback(self, darknet_bboxs):
         bboxs = darknet_bboxs.bounding_boxes
         bbox = BoundingBox()
@@ -30,14 +30,11 @@ class Detector():
             for i, bb in enumerate(bboxs) :
                 if bboxs[i].Class == 'bottle' and bboxs[i].probability >= self.m_pub_threshold:
                     bbox = bboxs[i]   
-                # elif bboxs[i].Class == 'can' and bboxs[i].probability >= self.m_pub_threshold:
-                #     bbox = bboxs[i]  
-        self.bbox = bbox
+                    self.bbox = bbox
         
-        #中心座標
-        self.cam_x = self.bbox.xmin + (self.bbox.xmax - self.bbox.xmin) / 2
-        self.cam_y = self.bbox.ymin + (self.bbox.ymax - self.bbox.ymin) / 2
-        # rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_raw", Image, self.DepthCallback)
+                    #中心座標
+                    self.cam_x = self.bbox.xmin + (self.bbox.xmax - self.bbox.xmin) / 2
+                    self.cam_y = self.bbox.ymin + (self.bbox.ymax - self.bbox.ymin) / 2
 
     def DepthCallback(self, depth_image_data):
         try:
@@ -63,23 +60,29 @@ class Detector():
                 self.y1 = self.z * self.y / info_msg.K[4]
 
                 self.x1 = self.x1 * 0.001
-                self.y1 = self.y1 * 0.001
+                self.y1 = self.y1 * 0.001 + 0.2 * self.y1 *0.001
                 self.z = self.z * 0.001
-                rospy.loginfo("x =%.2f, y=%.2f, z=%.2f ", self.x1, self.y1, self.z)
-
             except:
                 rospy.logwarn("transform_ERROR")
 
             #topic_publish
             try:
-                #topicとメッセージ値の作成
-                pub = rospy.Publisher("point_topic", Point, queue_size=10)
-                point_msg = Point()
-                point_msg.x = self.x1
-                point_msg.y = self.y1
-                point_msg.z = self.z
-                pub.publish(point_msg)
-
+                if 0.40 < self.z < 1.4 or self.cam_x != 0.0 and self.cam_y != 0.0:
+                    if -0.4 < self.x1 < 0.4 :
+                        pub = rospy.Publisher("point_head_topic", Point, queue_size=10)
+                        point_msg = Point()
+                        point_msg.x = self.x1
+                        point_msg.y = self.y1
+                        point_msg.z = self.z
+                        pub.publish(point_msg)
+                        rospy.loginfo("x =%.2f y=%.2f z=%.2f ", self.x1, self.y1, self.z)
+                    else:
+                        rospy.logwarn("Out of range")
+                else:
+                    rospy.loginfo("x =%.2f y=%.2f z=%.2f Distance over", self.x1, self.y1, self.z)
+                    self.cam_x = 0.0
+                    self.cam_y = 0.0
+                    # rospy.logwarn("Distance over")    
             except:
                 rospy.logwarn("Publish_ERROR")
         else:
@@ -95,4 +98,5 @@ if __name__=="__main__":
     except rospy.ROSInterruptException:
         pass
 
-#1113
+#1117
+#1120

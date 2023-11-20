@@ -28,22 +28,22 @@ class ImageProcessorNode:
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="rgb8")
 
 
-        #トリミング
-        crop_x = 0  #原点からの基準座標
-        crop_y = 0  #
-        crop_width = 280  #基準座標からのトリミング幅
-        crop_height = 480 #          　トリミング高さ
+        # #トリミング
+        # crop_x = 0  #原点からの基準座標
+        # crop_y = 0  #
+        # crop_width = 280  #基準座標からのトリミング幅
+        # crop_height = 480 #          　トリミング高さ
 
-        crop_image = cv_image[crop_y:crop_y+crop_height,crop_x:crop_x+crop_width]
-        height, width = crop_image.shape[:2]
+        # crop_image = cv_image[crop_y:crop_y+crop_height,crop_x:crop_x+crop_width]
+        # height, width = crop_image.shape[:2]
 
         # 画像を回転させる
-        rotated_image = cv2.rotate(crop_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        # rotated2_image = cv2.rotate(cv_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        # rotated_image = cv2.rotate(crop_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        rotated2_image = cv2.rotate(cv_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 
         # 回転させた画像を新しいトピックに出力
-        rotated_msg = self.bridge.cv2_to_imgmsg(rotated_image, encoding="rgb8")
+        rotated_msg = self.bridge.cv2_to_imgmsg(rotated2_image, encoding="rgb8")
         self.pub.publish(rotated_msg)
         # cv2.imshow("cam_image", rotated_image)
         # cv2.waitKey(1)
