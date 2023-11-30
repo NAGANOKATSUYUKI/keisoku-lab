@@ -4,6 +4,7 @@
 import rospy
 # 生成したメッセージのヘッダファイル
 from sample.msg import sample_message
+from std_msgs.msg import Bool
 
 
 def publisher():
@@ -29,8 +30,31 @@ def publisher():
         rate.sleep()
         count += 1
 
+def publisher_Bool():
+    rospy.init_node('sample_Bool_pub', anonymous=True)
+
+    pub = rospy.Publisher('sample_Bool', Bool, queue_size=10)
+
+    rate = rospy.Rate(1)
+
+    def_data = None
+    count = 0
+    while not rospy.is_shutdown():
+        rospy.loginfo("Publishing  %s, count = %d" %(str(def_data), count))
+
+        # 送信するメッセージの作成
+        msg = Bool()
+
+        def_data = True
+        msg.data = def_data
+
+        # 送信
+        pub.publish(msg)
+        rate.sleep()
+        count += 1
 
 if __name__ == '__main__':
     try:
-        publisher()
+        # publisher()
+        publisher_Bool()
     except rospy.ROSInterruptException: pass

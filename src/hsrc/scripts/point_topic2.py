@@ -14,7 +14,7 @@ class Detector():
         rospy.init_node("Point_topic")
         self.cv_bridge = CvBridge()
         self.bbox = BoundingBox()
-        self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.50)
+        self.m_pub_threshold = rospy.get_param("~pub_threshold", 0.30)
 
         self.cam_x = 0.0
         self.cam_y = 0.0
@@ -28,7 +28,7 @@ class Detector():
         bbox = BoundingBox()
         if len(bboxs) != 0 :
             for i, bb in enumerate(bboxs) :
-                if bboxs[i].Class == 'bottle' and bboxs[i].probability >= self.m_pub_threshold:
+                if bboxs[i].Class == 'pet' and bboxs[i].probability >= self.m_pub_threshold:
                     bbox = bboxs[i]   
                 # elif bboxs[i].Class == 'can' and bboxs[i].probability >= self.m_pub_threshold:
                 #     bbox = bboxs[i]  

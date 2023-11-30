@@ -7,20 +7,87 @@ import numpy as np
 from geometry_msgs.msg import Point, TransformStamped
 import controller_manager_msgs.srv
 import trajectory_msgs.msg
+from std_msgs.msg import Bool
 
 class Tf_publish():
     def __init__(self):
-        rospy.init_node("head_hand_manager_node")
+        rospy.init_node("Head_hand_manager_node")
         self.camera_coords = np.array([1.0, 1.0, 1.0])
         self.hand_msgs = np.array([0.0, 0.0, 0.0])
         self.head_msgs = np.array([0.0, 0.0, 0.0])
         self.hand_count = 0
         self.listener = tf.TransformListener()
+        self.Grasp_data = True
+        self.Stop_msg = False
 
         rospy.Subscriber("point_head_topic", Point, self.Head_callback)
         rospy.Subscriber("point_hand_topic", Point, self.Hand_callback)
+        rospy.Subscriber("Stop_msg", Bool, self.Stop_callback)
+        
+    #hand --->> Msg_manager
+    def Hand_callback(self, hand_msg):
+        try:
+            self.hand_msgs[0] = hand_msg.x
+            self.hand_msgs[1] = hand_msg.y
+            self.hand_msgs[2] = hand_msg.z
+            # rospy.loginfo("Hand --> OK")
+            # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.hand_msgs[0],self.hand_msgs[1], self.hand_msgs[2])
+            self.Msg_manager()
+        except:
+            rospy.logwarn("sub --> NO")
 
-    #tfの作成
+    #head --->> Msg_manager
+    def Head_callback(self, head_msg):
+        try:
+            if head_msg.x != 0.0 and head_msg.y != 0.0 or head_msg.x > head_msg.y :
+                if 0.3 < head_msg.z < 1.2 :
+                    self.camera_coords[0] =  head_msg.x
+                    self.camera_coords[1] =  head_msg.y
+                    self.camera_coords[2] =  head_msg.z
+                    # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.camera_coords[0],self.camera_coords[1], self.camera_coords[2])
+                    self.Msg_manager()
+                else:
+                    rospy.logwarn("Distance over")
+                    self.Grasp_data = None
+            else:
+                rospy.logwarn("Not Detection")
+        except :
+            rospy.logwarn("Unable to create tf")
+
+    #Msg_manager --->> Head_Hand_Manager
+    def Msg_manager(self):
+        if np.any(self.hand_msgs != 0.0) or np.any(self.camera_coords != 0.0):
+            self.Head_Hand_Manager()
+            self.hand_msgs[0] = 0
+            self.hand_msgs[1] = 0
+            self.hand_msgs[2] = 0
+            self.camera_coords[0] = 0
+            self.camera_coords[1] = 0
+            self.camera_coords[2] = 0
+        else:
+            pass
+
+    #Head_Hand_Manager --->> tf_publish
+    def Head_Hand_Manager(self):
+        if self.hand_msgs[2] == 1:
+            if self.hand_count == 5:
+                rospy.loginfo("hand ----------------> move")
+                
+                #下を見る動き
+                self.Head_controller(positions=[0.0, -0.6])
+                rospy.sleep(0.1)
+                # self.Omni_base_controller(positions=[0.0, 0, 0])　絶対位置になる
+                self.Arm_controller(positions=[0, 0, -1.57, -1.57, 0]) 
+                rospy.sleep(0.1)
+                self.hand_msgs[2] = 0
+                self.hand_count = 0
+            else:
+                self.hand_count = self.hand_count + 1
+        else:
+            # rospy.loginfo("head ---> move")
+            self.tf_publish()
+
+    #tf_create --->> Grasp_pub
     def tf_publish(self):
         tf_broadcaster = tf2_ros.TransformBroadcaster()
 
@@ -39,67 +106,29 @@ class Tf_publish():
 
         tf_broadcaster.sendTransform(gt)
         rospy.loginfo("tf_publish --> OK")
-        
-    #hand
-    def Hand_callback(self, hand_msg):
-        try:
-            self.hand_msgs[0] = hand_msg.x
-            self.hand_msgs[1] = hand_msg.y
-            self.hand_msgs[2] = hand_msg.z
-            # rospy.loginfo("Hand --> OK")
-            # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.hand_msgs[0],self.hand_msgs[1], self.hand_msgs[2])
-            self.Msg_manager()
-        except:
-            rospy.logwarn("sub --> NO")
-
-    #head
-    def Head_callback(self, head_msg):
-        try:
-            if head_msg.x != 0.0 and head_msg.y != 0.0 or head_msg.x > head_msg.y :
-                if head_msg.z < 1.4 :
-                    self.camera_coords[0] =  head_msg.x
-                    self.camera_coords[1] =  head_msg.y
-                    self.camera_coords[2] =  head_msg.z
-                    # rospy.loginfo("x= %0.1f, y= %0.1f, z=%0.1f", self.camera_coords[0],self.camera_coords[1], self.camera_coords[2])
-                    self.Msg_manager()
-                else:
-                    rospy.logwarn("Distance over")
-            else:
-                rospy.logwarn("Not Detection")
-        except :
-            rospy.logwarn("Unable to create tf")
-            
-    def Msg_manager(self):
-        if np.any(self.hand_msgs != 0.0) or np.any(self.camera_coords != 0.0):
-            self.Head_Hand_Manager()
-            self.hand_msgs[0] = 0
-            self.hand_msgs[1] = 0
-            self.hand_msgs[2] = 0
-            self.camera_coords[0] = 0
-            self.camera_coords[1] = 0
-            self.camera_coords[2] = 0
+        # rospy.loginfo("%s", self.msg)
+        if self.Stop_msg == True:
+            # rospy.loginfo("%s",self.Stop_msg)
+            rospy.loginfo("aS")
+            pass
         else:
+            # rospy.loginfo("%s",self.Stop_msg)
+            self.Grasp_pub()
             pass
 
+    def Stop_callback(self, stop_msg):
+        self.Stop_msg = stop_msg
 
-    def Head_Hand_Manager(self):
-        if self.hand_msgs[2] == 1:
-            if self.hand_count == 10:
-                rospy.loginfo("hand ----------------> move")
-                
-                #下を見る動き
-                self.Head_controller(positions=[0.0, -0.6])
-                rospy.sleep(0.1)
-                # self.Omni_base_controller(positions=[0.0, 0, 0])　絶対位置になる
-                self.Arm_controller(positions=[0, 0, -1.57, -1.57, 0]) 
-                rospy.sleep(0.1)
-                self.hand_msgs[2] = 0
-                self.hand_count = 0
-            else:
-                self.hand_count = self.hand_count + 1
-        else:
-            # rospy.loginfo("head ---> move")
-            self.tf_publish()
+    #Grasp_pub  --->> msg
+    def Grasp_pub(self):
+        pub = rospy.Publisher("Grasp_judge", Bool, queue_size=10)
+
+        msg = Bool()
+        self.Grasp_data = True
+        msg.data = self.Grasp_data
+        # rospy.loginfo("%s", msg.data)
+
+        pub.publish(msg)
 
     #頭を動かす
     def Head_controller(self, positions= None):
@@ -250,4 +279,4 @@ if __name__=="__main__":
         pass
 
 
-#1117
+#1126

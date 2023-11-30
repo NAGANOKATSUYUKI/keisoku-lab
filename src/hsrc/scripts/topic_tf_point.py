@@ -12,40 +12,23 @@ from geometry_msgs.msg import TransformStamped
 
 class Tfpoint_Detector:
     def __init__(self):
+        rospy.init_node("Tfpoint_detector_node")
         self.bbox = BoundingBox()
-        self.pub_threshold = rospy.get_param("~pub_threshold", 0.40)
-        self.pub = rospy.Publisher("point_topic", Point, queue_size=10)
+        self.cv_bridge = CvBridge()
+        self.pub_threshold = rospy.get_param("~pub_threshold", 0.20)
+        self.pub = rospy.Publisher("Topic_tf_point", Point, queue_size=10)
 
         # average variables
-        self.i = 0
         self.sum_x = 0
         self.sum_y = 0
         self.sum_z = 0
         self.cam_x = 0.0
         self.cam_y = 0.0
-        self.frame_count = 0
 
         # detection subscription
         self.sub_head_bbox = rospy.Subscriber("/darknet_ros0/bounding_boxes", BoundingBoxes, self.HeadBboxCallback)
-
-    def HandBboxCallback(self, darknet_bboxs):
-        bbox = BoundingBox()
-        hand_bboxs = darknet_bboxs.bounding_boxes
-        if hand_bboxs:
-            for i in range(len(hand_bboxs)):
-                if hand_bboxs[i].Class == "bottle" and hand_bboxs[i].probability >= self.pub_threshold:
-                    bbox = hand_bboxs[i]
-                    self.class_name = bbox.Class
-                else:
-                    pass
-        else:
-            pass
-
-        hand_cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2
-        hand_cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2
-        rospy.loginfo("x = %.2f, y = %.2f", hand_cam_x, hand_cam_y)
-        hand_cam_x = 0
-        hand_cam_y = 0
+        self.sub_cam_depth = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_raw", Image, self.DepthCallback)
+        # self.sub_camera_info = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/camera_info", CameraInfo, self.CameraInfoCallback)
 
     def HeadBboxCallback(self, darknet_bboxs):
         bbox = BoundingBox()
@@ -55,77 +38,64 @@ class Tfpoint_Detector:
                 if head_bboxs[i].Class == "bottle" and head_bboxs[i].probability >= self.pub_threshold:
                     bbox = head_bboxs[i]
                     self.class_name = bbox.Class
+
+                    #中心座標
+                    self.cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2
+                    self.cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2
                 else:
                     pass
         else:
-            pass
-
-        self.cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2
-        self.cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2
-        self.sub_head_swich = True
-        self.sub_cam_depth = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_raw", Image, self.DepthCallback)
-        
-        self.frame_count += 1
-        if self.frame_count == 30:
-            self.frame_count = 0
-            self.sub_hand_bbox = rospy.Subscriber("/darknet_ros1/bounding_boxes", BoundingBoxes, self.HandBboxCallback)
-        else:
-            pass
+            pass        
 
     def DepthCallback(self, depth_image_data):
         try:
-            if self.sub_head_swich:
-                cv_bridge = CvBridge()
-                cv_ptr = cv_bridge.imgmsg_to_cv2(depth_image_data, desired_encoding="32FC1")
-                depth_x = int(self.cam_x)
-                depth_y = int(self.cam_y)
-                bbox_depth = cv_ptr[depth_y, depth_x]
-                self.sub_camera_info = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/camera_info", CameraInfo, self.CameraInfoCallback)
-                self.sub_head_swich = False
-            else:
-                self.sub_cam_depth.unregister()
-                self.sub_camera_info.unregister()
+            self.depth_image = self.cv_bridge.imgmsg_to_cv2(depth_image_data, "passthrough")
+            depth_x = int(self.cam_x)
+            depth_y = int(self.cam_y)
+            self.bbox_depth = self.depth_image[depth_y, depth_x]
+            
+            self.CameraInfoCallback()
+
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: %s", e)
 
-    def CameraInfoCallback(self, info_msg):
+    #座標変換
+    def CameraInfoCallback(self):
         if self.cam_x != 0.0 and self.cam_y != 0.0 or self.cam_x > self.cam_y:
             try:
-                crrection_x = self.cam_x - info_msg.K[2]  # 320
-                crrection_y = self.cam_y - info_msg.K[5]  # 280
-                z = self.bbox_depth
-                x1 = z * (crrection_x / info_msg.K[0])
-                y1 = z * (crrection_y / info_msg.K[4])
-                x = x1 * 0.001
-                y = y1 * 0.001 + 0.2 * y1 * 0.001
-                z = z * 0.001
+                self.x = self.cam_x - 320.7234912485017  #depth_infoの値を入力
+                self.y = self.cam_y - 242.2827148742709
+                self.z = self.bbox_depth
+
+                self.x1 = self.z * self.x / 533.8084805746594
+                self.y1 = self.z * self.y / 534.057713759154
+
+                self.x1 = self.x1 * 0.001
+                self.y1 = self.y1 * 0.001 + 0.2 * self.y1 *0.001
+                self.z = self.z * 0.001
             except Exception as e:
                 rospy.logwarn("Transform Error: %s", str(e))
 
-            if 0.40 < z <= 1.5 and -0.4 < x < 0.4:
-                self.CoordinatePointCallback()
-                self.sum_x += x
-                self.sum_y += y
-                self.sum_z += z
-                self.i += 1
-                rospy.loginfo("class:%s x = %.2f y = %.2f z = %.2f %d", self.class_name, x, y, z, self.i)
+            if 0.40 < self.z <= 1.2 :
+                if -0.4 < self.x1 < 0.4:
+                    self.CoordinatePointCallback()
+                    point_msg = Point()
+                    point_msg.x = self.x1
+                    point_msg.y = self.y1
+                    point_msg.z = self.z
+                    self.pub.publish(point_msg)
+                    # rospy.loginfo("x =%.2f y=%.2f z=%.2f ", self.x1, self.y1, self.z)
+                else:
+                    rospy.logwarn("Out of range_X")
             else:
-                rospy.logwarn("Out of range")
-
-            if self.i == 30:
-                x = self.sum_x / 30
-                y = self.sum_y / 30
-                z = self.sum_z / 30
-                self.sum_x = 0
-                self.sum_y = 0
-                self.sum_z = 0
-                point_msg = Point(x=x, y=y, z=z)
-                self.pub.publish(point_msg)
-                self.i = 0
-            else:
-                pass
+                rospy.logwarn("Not Detection --> Distance over z=%.2f ", self.z)
+                self.cam_x = 0.0
+                self.cam_y = 0.0
+                self.x1 = 0.0
+                self.y1 = 0.0
         else:
             rospy.logwarn("Not Detection")
+            # rospy.loginfo("x =%.2f y=%.2f z=%.2f ", self.cam_x, self.cam_y, self.z)
 
     def CoordinatePointCallback(self):
         try:
@@ -135,23 +105,25 @@ class Tfpoint_Detector:
             gt.header.stamp = rospy.Time.now()
             gt.header.frame_id = "head_rgbd_sensor_link"
             gt.child_frame_id = "target_frame"
-            gt.transform.translation.x = self.x
-            gt.transform.translation.y = self.y
+            gt.transform.translation.x = self.x1
+            gt.transform.translation.y = self.y1
             gt.transform.translation.z = self.z
 
-            q = tf2_geometry_msgs.transformations.quaternion_from_euler(0, 0, 0)
-            gt.transform.rotation.x = q[0]
-            gt.transform.rotation.y = q[1]
-            gt.transform.rotation.z = q[2]
-            gt.transform.rotation.w = q[3]
+            gt.transform.rotation.x = 0.0
+            gt.transform.rotation.y = 0.0
+            gt.transform.rotation.z = 0.0
+            gt.transform.rotation.w = 1.0
 
             static_tf_broadcaster.sendTransform(gt)
+            rospy.loginfo("class:%s x = %.2f y = %.2f z = %.2f --> tf_publish", self.class_name, self.x1, self.y1, self.z)
         except Exception as e:
             rospy.logerr("Unable to create tf: %s", str(e))
 
 if __name__ == '__main__':
-    rospy.init_node("Tfpoint_detector_node")
-    tfpoint_detector = Tfpoint_Detector()
-    rospy.spin()
+    try:
+        
+        Tfpoint_Detector()
+        rospy.spin()
 
-#微妙
+    except rospy.ROSInterruptException:
+        pass

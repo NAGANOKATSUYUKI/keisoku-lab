@@ -26,6 +26,7 @@ public:
         //検出されて初めてサブスクライブする方法
         
         sub_head_bbox = nh.subscribe("/darknet_ros0/bounding_boxes", 1, &Tfpoint_Detector::HeadBboxCallback, this);
+        sub_hand_bbox = nh.subscribe("/darknet_ros1/bounding_boxes", 1, &Tfpoint_Detector::HandBboxCallback, this);
     }
 
     //target detection
@@ -46,7 +47,7 @@ public:
         }
         hand_cam_x = bbox.xmin + (bbox.xmax - bbox.xmin) / 2;
         hand_cam_y = bbox.ymin + (bbox.ymax - bbox.ymin) / 2;
-        ROS_INFO("x = %.2d, y = %.2d", hand_cam_x, hand_cam_y);
+        // ROS_INFO("x = %.2d, y = %.2d", hand_cam_x, hand_cam_y);
         hand_cam_x = 0;
         hand_cam_y = 0;
 
@@ -74,14 +75,14 @@ public:
         // ROS_INFO("x = %.2d, y = %.2d", cam_x, cam_y);
 
         //30フレームごとにsubしているつもりがうまく行かない。
-        frame_count++;
-        if (frame_count == 30) {
-            frame_count = 0;
-            sub_hand_bbox = nh.subscribe("/darknet_ros1/bounding_boxes", 1, &Tfpoint_Detector::HandBboxCallback, this);
+        // frame_count++;
+        // if (frame_count == 30) {
+        //     frame_count = 0;
+        //     sub_hand_bbox = nh.subscribe("/darknet_ros1/bounding_boxes", 1, &Tfpoint_Detector::HandBboxCallback, this);
 
-        }else{
-            //
-        }
+        // }else{
+        //     //
+        // }
 
     }
 
@@ -95,7 +96,8 @@ public:
                 int depth_y = static_cast<int>(cam_y);
                 bbox_depth = cv_ptr->image.at<float>(depth_y, depth_x);
                 // ROS_INFO("%d, %d, %f", depth_x, depth_y, bbox_depth);
-                sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
+                // sub_camera_info = nh.subscribe("/hsrb/head_rgbd_sensor/depth_registered/camera_info", 1, &Tfpoint_Detector::CameraInfoCallback, this);
+                CameraInfoCallback();
                 sub_head_swich = false;
             }else{
                 sub_cam_depth.shutdown();
@@ -108,16 +110,21 @@ public:
     }
 
     //座標軸変換
-    void CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& info_msg) {
-
+    // void CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& info_msg) {
+    void CameraInfoCallback() {
         //検出しないときは通さない
         if(cam_x != 0.0 && cam_y != 0.0 || cam_x > cam_y ){
             try {
-                crrection_x = cam_x - info_msg->K[2];//320
-                crrection_y = cam_y - info_msg->K[5];//280
+                // crrection_x = cam_x - info_msg->K[2];//320
+                // crrection_y = cam_y - info_msg->K[5];//280
+                // z = bbox_depth;
+                // x1 = z * (crrection_x / info_msg->K[0]);
+                // y1 = z * (crrection_y / info_msg->K[4]);
+                crrection_x = cam_x - 320.7234912485017;//320
+                crrection_y = cam_y - 242.2827148742709;//280
                 z = bbox_depth;
-                x1 = z * (crrection_x / info_msg->K[0]);
-                y1 = z * (crrection_y / info_msg->K[4]);
+                x1 = z * (crrection_x / 533.8084805746594);
+                y1 = z * (crrection_y / 534.057713759154);
                 x = x1 * 0.001 ;
                 y = y1 * 0.001 + 0.2 * y1 *0.001;
                 z = z * 0.001;
@@ -147,7 +154,7 @@ public:
 
                 if (i == 30){
                     x = sum_x / 30;
-                    y = sum_y / 30; "Out of range"
+                    y = sum_y / 30; 
                     z = sum_z / 30;
                     sum_x = 0;
                     sum_y = 0;

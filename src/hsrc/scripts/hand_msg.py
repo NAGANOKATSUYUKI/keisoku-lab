@@ -39,6 +39,7 @@ class Detector():
                 else:
                     self.cam_x = 0
                     self.cam_y = 0
+                    rospy.logwarn("Not Detection")
 
     #topic_publish
     def CameraInfo_callback(self):

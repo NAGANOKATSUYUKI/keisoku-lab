@@ -89,10 +89,10 @@ if __name__=='__main__':
                                 omni_base.go_abs(0.0, 0.0, 0.0, 200.0)
                                 rospy.loginfo("初期位置 --> OK")
                                 # 物体を右の箱に入れる想定
-                                omni_base.go_rel(0.0, 0.0, -1.57, 100.0)#右向く
+                                omni_base.go_rel(0.0, 0.0, 1.57, 100.0)#右向く
                                 gripper.command(1.0)
                                 rospy.loginfo("箱に入れる --> OK")
-                                omni_base.go_rel(0.0, 0.0, 1.57, 100.0)#左向く
+                                omni_base.go_rel(0.0, 0.0, -1.57, 100.0)#左向く
                                 whole_body.move_to_go()
                                 rospy.loginfo("リセット --> OK")
                                 # whole_body.move_to_joint_positions({"head_tilt_joint": -0.3})

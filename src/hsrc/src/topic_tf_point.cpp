@@ -14,7 +14,7 @@ class Tfpoint_Detector {
 public:
     Tfpoint_Detector() {
         bbox = darknet_ros_msgs::BoundingBox();
-        pub_threshold = ros::param::param("~pub_threshold", 0.40);
+        pub_threshold = ros::param::param("~pub_threshold", 0.01);
         pub = nh.advertise<geometry_msgs::Point>("point_topic", 10);
 
         //average_variable
@@ -33,7 +33,7 @@ public:
         const std::vector<darknet_ros_msgs::BoundingBox>& head_bboxs = darknet_bboxs->bounding_boxes;
         if (head_bboxs.size() != 0) {
             for (int i = 0; i < head_bboxs.size(); i++) {
-                if (head_bboxs[i].Class == "bottle" && head_bboxs[i].probability >= pub_threshold) {
+                if (head_bboxs[i].Class == "pet" && head_bboxs[i].probability >= pub_threshold) {
                     bbox = head_bboxs[i];
                     class_name = bbox.Class;
                 }else{
